@@ -103,13 +103,19 @@ namespace Logitech_LED_Lync_Status
                     LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 250);
                     //SetLEDToCurrentStatus((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
                 }
-                im.InstantMessageReceived += Im_InstantMessageReceived;
+                foreach (var p in e.Conversation.Participants)
+                {
+                    if (!p.IsSelf)
+                    {
+                        im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
+                        im.InstantMessageReceived += Im_InstantMessageReceived;
+                    }
+                }
             }
         }
 
         private static void Im_InstantMessageReceived(object sender, MessageSentEventArgs e)
         {
-            if (e.)
             LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
         }
 
