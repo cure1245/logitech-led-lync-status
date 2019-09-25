@@ -40,13 +40,13 @@ namespace Logitech_LED_Lync_Status
             {
                 icon.Icon = Properties.Resources.Icon1;
                 icon.ContextMenu = new ContextMenu(new MenuItem[] {
+                new MenuItem("Reload", (s, e) => { Application.Restart(); }),
                 new MenuItem("Exit", (s, e) => { Application.Exit(); }),
             });
                 icon.Visible = true;
 
-                
                 lyncClient.StateChanged += LyncClient_StateChanged;
-                ManualResetEventSlim _isRunning;
+                if (lyncClient.State == ClientState.SignedIn) Initialize();
                 Application.Run();
                 icon.Visible = false;
             }
@@ -57,20 +57,25 @@ namespace Logitech_LED_Lync_Status
             switch (e.NewState)
             {
                 case ClientState.SignedIn:
-                    LogitechGSDK.LogiLedInit();
-                    self = lyncClient.Self;
-                    self.Contact.ContactInformationChanged += OwnInfoHasChanged;
-                    lyncClient.ConversationManager.ConversationAdded += ConversationAdded;
-                    lyncClient.ConversationManager.ConversationRemoved += ConversationRemoved;
-                    SetHeadsetLEDs((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
+                    Initialize();
                     break;
                 case ClientState.SigningOut:
-                    self = null;
                     LogitechGSDK.LogiLedShutdown();
                     break;
                 case ClientState.ShuttingDown:
+                    lyncClient = null;
                     break;
-            }         
+            }
+        }
+
+        private static void Initialize()
+        {
+            LogitechGSDK.LogiLedInitWithName("Skype for Business Status Watcher");
+            self = lyncClient.Self;
+            self.Contact.ContactInformationChanged += OwnInfoHasChanged;
+            lyncClient.ConversationManager.ConversationAdded += ConversationAdded;
+            lyncClient.ConversationManager.ConversationRemoved += ConversationRemoved;
+            SetLEDToCurrentStatus((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
         }
 
         private static void ConversationRemoved(object sender, ConversationManagerEventArgs e)
@@ -80,13 +85,32 @@ namespace Logitech_LED_Lync_Status
 
         private static void ConversationAdded(object sender, ConversationManagerEventArgs e)
         {
-            var avModality = e.Conversation.Modalities[ModalityTypes.AudioVideo];
-            if (avModality.State == ModalityState.Notified)
+            var call = (AVModality)e.Conversation.Modalities[ModalityTypes.AudioVideo];
+            var im = (InstantMessageModality)e.Conversation.Modalities[ModalityTypes.InstantMessage];
+
+            if (call.State == ModalityState.Notified)
             {
                 LogitechGSDK.LogiLedFlashLighting(0, 0, 100, LogitechGSDK.LOGI_LED_DURATION_INFINITE, 200);
+                e.Conversation.Modalities[ModalityTypes.AudioVideo].ModalityStateChanged += CallStateChanged;
+                return;
             }
+            if (im.State == ModalityState.Notified)
+            {
+                LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
+                while (im.State == ModalityState.Notified)
+                {
+                    Thread.Sleep(5000);
+                    LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 250);
+                    //SetLEDToCurrentStatus((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
+                }
+                im.InstantMessageReceived += Im_InstantMessageReceived;
+            }
+        }
 
-            e.Conversation.Modalities[ModalityTypes.AudioVideo].ModalityStateChanged += CallStateChanged;
+        private static void Im_InstantMessageReceived(object sender, MessageSentEventArgs e)
+        {
+            if (e.)
+            LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
         }
 
         private static void CallStateChanged(object sender, ModalityStateChangedEventArgs e)
@@ -103,11 +127,11 @@ namespace Logitech_LED_Lync_Status
 
         private static void OwnInfoHasChanged(object sender, ContactInformationChangedEventArgs e)
         {
-            if (self != null && e.ChangedContactInformation.Contains(ContactInformationType.Availability))
-                SetHeadsetLEDs((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
+            if (self.Contact != null && e.ChangedContactInformation.Contains(ContactInformationType.Availability))
+                SetLEDToCurrentStatus((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
         }
 
-        private static void SetHeadsetLEDs(ContactAvailability availability)
+        private static void SetLEDToCurrentStatus(ContactAvailability availability)
         {
             switch (availability)
             {
