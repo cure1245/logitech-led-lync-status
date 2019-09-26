@@ -6,7 +6,6 @@ using System.Windows.Forms;
 using Microsoft.Lync.Model;
 using Microsoft.Lync.Model.Conversation;
 using Microsoft.Lync.Model.Conversation.AudioVideo;
-using Microsoft.Lync.Utilities;
 using LedCSharp;
 using System.Threading;
 
