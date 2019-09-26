@@ -6,7 +6,6 @@ using System.Windows.Forms;
 using Microsoft.Lync.Model;
 using Microsoft.Lync.Model.Conversation;
 using Microsoft.Lync.Model.Conversation.AudioVideo;
-using Microsoft.Lync.Utilities;
 using LedCSharp;
 using System.Threading;
 
@@ -70,12 +69,23 @@ namespace Logitech_LED_Lync_Status
 
         private static void Initialize()
         {
+            foreach (var c in lyncClient.ConversationManager.Conversations)
+            {
+                foreach (var p in c.Participants)
+                {
+                    if (!p.IsSelf && !p.IsMuted)
+                    {
+                        InstantMessageModality im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
+                        im.InstantMessageReceived += Im_InstantMessageReceived; 
+                    }
+                }
+            }
             LogitechGSDK.LogiLedInitWithName("Skype for Business Status Watcher");
             self = lyncClient.Self;
             self.Contact.ContactInformationChanged += OwnInfoHasChanged;
             lyncClient.ConversationManager.ConversationAdded += ConversationAdded;
             lyncClient.ConversationManager.ConversationRemoved += ConversationRemoved;
-            SetLEDToCurrentStatus((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
+            SetLEDToCurrentStatus();
         }
 
         private static void ConversationRemoved(object sender, ConversationManagerEventArgs e)
@@ -91,8 +101,7 @@ namespace Logitech_LED_Lync_Status
             if (call.State == ModalityState.Notified)
             {
                 LogitechGSDK.LogiLedFlashLighting(0, 0, 100, LogitechGSDK.LOGI_LED_DURATION_INFINITE, 200);
-                e.Conversation.Modalities[ModalityTypes.AudioVideo].ModalityStateChanged += CallStateChanged;
-                return;
+                e.Conversation.Modalities[ModalityTypes.AudioVideo].ModalityStateChanged += CallStateChanged;                
             }
             if (im.State == ModalityState.Notified)
             {
@@ -101,22 +110,23 @@ namespace Logitech_LED_Lync_Status
                 {
                     Thread.Sleep(5000);
                     LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 250);
-                    //SetLEDToCurrentStatus((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
-                }
-                foreach (var p in e.Conversation.Participants)
+                    SetLEDToCurrentStatus();
+                }                
+            }
+            foreach (var p in e.Conversation.Participants)
+            {
+                if (!p.IsSelf && !p.IsMuted)
                 {
-                    if (!p.IsSelf)
-                    {
-                        im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
-                        im.InstantMessageReceived += Im_InstantMessageReceived;
-                    }
+                    im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
+                    im.InstantMessageReceived += Im_InstantMessageReceived;
                 }
             }
         }
 
         private static void Im_InstantMessageReceived(object sender, MessageSentEventArgs e)
         {
-            LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
+            LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 200);
+            SetLEDToCurrentStatus();
         }
 
         private static void CallStateChanged(object sender, ModalityStateChangedEventArgs e)
@@ -134,12 +144,12 @@ namespace Logitech_LED_Lync_Status
         private static void OwnInfoHasChanged(object sender, ContactInformationChangedEventArgs e)
         {
             if (self.Contact != null && e.ChangedContactInformation.Contains(ContactInformationType.Availability))
-                SetLEDToCurrentStatus((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
+                SetLEDToCurrentStatus();
         }
 
-        private static void SetLEDToCurrentStatus(ContactAvailability availability)
+        private static void SetLEDToCurrentStatus()
         {
-            switch (availability)
+            switch ((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability))
             {
                 case ContactAvailability.DoNotDisturb:
                     LogitechGSDK.LogiLedSetLighting(100, 0, 100);
