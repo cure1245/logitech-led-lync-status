@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-
-using LedCSharp;
-using System.Threading;
+using System.Windows.Threading;
 
 namespace LyncStatusforRGB
 {
@@ -26,13 +21,12 @@ namespace LyncStatusforRGB
             {
                 icon.Icon = Properties.Resources.Icon0;
                 icon.ContextMenu = new ContextMenu(new MenuItem[] {
-#pragma warning disable IDE0067 // Dispose objects before losing scope
                     new MenuItem("Reload", (s, e) => { ResetStatusWatcher(); }),
-#pragma warning restore IDE0067 // Dispose objects before losing scope
                     new MenuItem("Exit", (s, e) => { Application.Exit(); }),
             });
                 icon.Visible = true;
-                
+
+                statusWatcher = new LyncStatusWatcher();
                 statusWatcher.InitializeClient();
                 Application.Run();
                 icon.Visible = false;

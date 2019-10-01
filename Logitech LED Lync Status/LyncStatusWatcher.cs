@@ -33,25 +33,9 @@ namespace LyncStatusforRGB
             }
             SubscribeToClientEvents();
             if (lyncClient.State == ClientState.SignedIn) DoLoginTasks();
-
-            foreach (var c in lyncClient.ConversationManager.Conversations)
-            {
-                foreach (var p in c.Participants)
-                {
-                    if (!p.IsSelf && !p.IsMuted)
-                    {
-                        InstantMessageModality im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
-                        AVModality call = (AVModality)p.Modalities[ModalityTypes.AudioVideo];
-
-                        im.InstantMessageReceived += Im_InstantMessageReceived;
-                        call.ModalityStateChanged += CallStateChanged;
-                    }
-                }
-            }
         }
         private void SubscribeToClientEvents()
         {
-            lyncClient.ClientDisconnected += LyncClient_ClientDisconnected;
             lyncClient.StateChanged += LyncClient_StateChanged;
             lyncClient.ConversationManager.ConversationAdded += ConversationAdded;
             //lyncClient.ConversationManager.ConversationRemoved += ConversationRemoved;
@@ -70,7 +54,10 @@ namespace LyncStatusforRGB
                     if (!p.IsSelf && !p.IsMuted)
                     {
                         InstantMessageModality im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
+                        AVModality call = (AVModality)p.Modalities[ModalityTypes.AudioVideo];
+
                         im.InstantMessageReceived += Im_InstantMessageReceived;
+                        call.ModalityStateChanged += CallStateChanged;
                     }
                 }
             }
@@ -92,11 +79,6 @@ namespace LyncStatusforRGB
                     lyncClient = null;
                     break;
             }
-        }
-        private void LyncClient_ClientDisconnected(object sender, EventArgs e)
-        {
-            //TODO: Add client disconnect handling.
-            throw new NotImplementedException();
         }
         private void ConversationRemoved(object sender, ConversationManagerEventArgs e)
         {
@@ -121,7 +103,7 @@ namespace LyncStatusforRGB
                 {
                     Thread.Sleep(5000);
                     LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 250);
-                    //SetLEDToCurrentStatus((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability));
+                    SetLEDToCurrentStatus();
                 }
             }
             foreach (var p in e.Conversation.Participants)
