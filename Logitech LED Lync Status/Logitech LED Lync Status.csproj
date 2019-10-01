@@ -53,7 +53,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="LEDLyncStatus.cs" />
+    <Compile Include="LyncStatusWatcher.cs" />
     <Compile Include="LogitechGSDK.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Logitech_LED_Lync_Status.Properties {
+namespace LyncStatusforRGB.Properties {
     using System;
     
     
