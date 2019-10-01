@@ -6,23 +6,36 @@ using System;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace LyncStatusforRGB
+namespace LyncStatusforRGBDevices
 {
+    public enum CallState { Ringing, Connected, Ended }
+    public enum Availability { Free, Busy, Away, Idle, DoNotDisturb }
+    public enum MessageState { New, Updated }
+
+    public delegate void CallStateHandler(CallState state);
+    public delegate void AvailabilityHandler(Availability availability);
+    public delegate void InstantMessageHandler(MessageState state);
+
     class LyncStatusWatcher
     {
         private LyncClient lyncClient;
         private Self self;
 
+        public bool IsClientConnected { get; private set; }
+
+        public event AvailabilityHandler AvailabilityChanged;
+        public event InstantMessageHandler MessageReceived;
+        public event CallStateHandler CallStatusChanged;
+
         public void InitializeClient()
         {
             try
             {
-                lyncClient = null;
-                lyncClient = LyncClient.GetClient();
-                if (lyncClient.State == ClientState.Invalid)
+                do
                 {
-                    throw new NotImplementedException();
-                }
+                    lyncClient = null;
+                    lyncClient = LyncClient.GetClient();
+                } while (lyncClient.State == ClientState.Invalid);
             }
             catch (ClientNotFoundException)
             {
@@ -75,15 +88,11 @@ namespace LyncStatusforRGB
                 case ClientState.SigningOut:
                     LogitechGSDK.LogiLedShutdown();
                     break;
-                case ClientState.ShuttingDown:
-                    lyncClient = null;
-                    break;
             }
         }
         private void ConversationRemoved(object sender, ConversationManagerEventArgs e)
         {
-            //TODO: Add conversation removal logic.
-            throw new NotImplementedException();
+            //e.Conversation.Participants
         }
         private void ConversationAdded(object sender, ConversationManagerEventArgs e)
         {
@@ -92,12 +101,14 @@ namespace LyncStatusforRGB
 
             if (call.State == ModalityState.Notified)
             {
+                CallStatusChanged?.Invoke(CallState.Ringing);
                 LogitechGSDK.LogiLedFlashLighting(0, 0, 100, LogitechGSDK.LOGI_LED_DURATION_INFINITE, 200);
                 e.Conversation.Modalities[ModalityTypes.AudioVideo].ModalityStateChanged += CallStateChanged;
                 return;
             }
             if (im.State == ModalityState.Notified)
             {
+                MessageReceived?.Invoke(MessageState.New);
                 LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
                 while (im.State == ModalityState.Notified)
                 {
@@ -121,6 +132,7 @@ namespace LyncStatusforRGB
         }
         private void Im_InstantMessageReceived(object sender, MessageSentEventArgs e)
         {
+            MessageReceived?.Invoke(MessageState.Updated);
             LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 200);
             SetLEDToCurrentStatus();
         }
@@ -128,17 +140,44 @@ namespace LyncStatusforRGB
         {
             if (e.NewState == ModalityState.Connected)
             {
+                CallStatusChanged?.Invoke(CallState.Connected);
                 LogitechGSDK.LogiLedPulseLighting(100, 0, 0, 7200000, 800);
             }
             else if (e.NewState == ModalityState.Disconnected)
             {
+                CallStatusChanged?.Invoke(CallState.Ended);
                 LogitechGSDK.LogiLedStopEffects();
             }
         }
         private void OwnInfoHasChanged(object sender, ContactInformationChangedEventArgs e)
         {
             if (self.Contact != null && e.ChangedContactInformation.Contains(ContactInformationType.Availability))
+            {
+                if (AvailabilityChanged != null)
+                {
+                    switch ((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability))
+                    {
+                        case ContactAvailability.DoNotDisturb:
+                            AvailabilityChanged(Availability.DoNotDisturb);
+                            break;
+                        case ContactAvailability.Free:
+                            AvailabilityChanged(Availability.Free);
+                            break;
+                        case ContactAvailability.Busy:
+                            AvailabilityChanged(Availability.Busy);
+                            break;
+                        case ContactAvailability.Away:
+                        case ContactAvailability.TemporarilyAway:
+                            AvailabilityChanged(Availability.Away);
+                            break;
+                        case ContactAvailability.FreeIdle:
+                        case ContactAvailability.BusyIdle:
+                            AvailabilityChanged(Availability.Idle);
+                            break;
+                    } 
+                }
                 SetLEDToCurrentStatus();
+            }
         }
         private void SetLEDToCurrentStatus()
         {

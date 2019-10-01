@@ -2,7 +2,7 @@
 using System.Windows.Forms;
 using System.Windows.Threading;
 
-namespace LyncStatusforRGB
+namespace LyncStatusforRGBDevices
 {
     static class Program
     {
@@ -16,14 +16,13 @@ namespace LyncStatusforRGB
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            
+
             using (NotifyIcon icon = new NotifyIcon())
+            using (MenuItem reload = new MenuItem("Reload", (s, e) => { ResetStatusWatcher(); }))
+            using (MenuItem exit = new MenuItem("Exit", (s, e) => { Application.Exit(); }))
             {
                 icon.Icon = Properties.Resources.Icon0;
-                icon.ContextMenu = new ContextMenu(new MenuItem[] {
-                    new MenuItem("Reload", (s, e) => { ResetStatusWatcher(); }),
-                    new MenuItem("Exit", (s, e) => { Application.Exit(); }),
-            });
+                icon.ContextMenu = new ContextMenu(new MenuItem[] { reload, exit });
                 icon.Visible = true;
 
                 statusWatcher = new LyncStatusWatcher();
