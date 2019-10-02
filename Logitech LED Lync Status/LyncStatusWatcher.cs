@@ -1,8 +1,8 @@
-﻿using LedCSharp;
-using Microsoft.Lync.Model;
+﻿using Microsoft.Lync.Model;
 using Microsoft.Lync.Model.Conversation;
 using Microsoft.Lync.Model.Conversation.AudioVideo;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -10,7 +10,12 @@ namespace LyncStatusforRGBDevices
 {
     public enum CallState { Ringing, Connected, Ended }
     public enum Availability { Free, Busy, Away, Idle, DoNotDisturb }
-    public enum MessageState { New, Updated }
+    public enum MessageState
+    {
+        New,
+        Updated,
+        Opened
+    }
 
     public delegate void CallStateHandler(CallState state);
     public delegate void AvailabilityHandler(Availability availability);
@@ -20,13 +25,44 @@ namespace LyncStatusforRGBDevices
     {
         private LyncClient lyncClient;
         private Self self;
+        private static readonly List<ConversationWatcher> watcherList = new List<ConversationWatcher>();
 
-        public bool IsClientConnected { get; private set; }
+        public static event AvailabilityHandler AvailabilityChanged;
+        public static event InstantMessageHandler MessageReceived;
+        public static event CallStateHandler CallStatusChanged;
+        public event EventHandler OnClientReady;
 
-        public event AvailabilityHandler AvailabilityChanged;
-        public event InstantMessageHandler MessageReceived;
-        public event CallStateHandler CallStatusChanged;
+        private static MessageState currentMsgState;
+        public static MessageState CurrentMsgState
+        {
+            get => currentMsgState;
+            private set
+            {
+                currentMsgState = value;
+                MessageReceived?.Invoke(value);
+            }
+        }
 
+        private bool isClientConnected;
+        public bool IsClientConnected
+        {
+            get => isClientConnected;
+            set
+            {
+                isClientConnected = value;
+                OnClientReady(this, new EventArgs());
+            }
+        }
+        private Availability userStatus;
+        public Availability UserStatus
+        {
+            get => userStatus;
+            private set
+            {
+                userStatus = value;
+                AvailabilityChanged?.Invoke(value);
+            }
+        }
         public void InitializeClient()
         {
             try
@@ -39,13 +75,21 @@ namespace LyncStatusforRGBDevices
             }
             catch (ClientNotFoundException)
             {
-                var result = MessageBox.Show("Skype for Business is not running!", "Client not found", MessageBoxButtons.RetryCancel);
+                var result = MessageBox.Show("Skype for Business is not running!", "Error accessing Lync client", MessageBoxButtons.RetryCancel);
+                if (result == DialogResult.Cancel) Environment.Exit(1);
+                else InitializeClient();
+                return;
+            }
+            catch (LyncClientException e)
+            {
+                var result = MessageBox.Show(e.Message, "Error accessing Lync client", MessageBoxButtons.RetryCancel);
                 if (result == DialogResult.Cancel) Environment.Exit(1);
                 else InitializeClient();
                 return;
             }
             SubscribeToClientEvents();
             if (lyncClient.State == ClientState.SignedIn) DoLoginTasks();
+            IsClientConnected = true;
         }
         private void SubscribeToClientEvents()
         {
@@ -62,21 +106,10 @@ namespace LyncStatusforRGBDevices
         {
             foreach (var c in lyncClient.ConversationManager.Conversations)
             {
-                foreach (var p in c.Participants)
-                {
-                    if (!p.IsSelf && !p.IsMuted)
-                    {
-                        InstantMessageModality im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
-                        AVModality call = (AVModality)p.Modalities[ModalityTypes.AudioVideo];
-
-                        im.InstantMessageReceived += Im_InstantMessageReceived;
-                        call.ModalityStateChanged += CallStateChanged;
-                    }
-                }
+                watcherList.Add(new ConversationWatcher(c));
             }
-            LogitechGSDK.LogiLedInitWithName("Skype for Business Status Watcher");
             SubscribeToSelfEvents();
-            SetLEDToCurrentStatus();
+            SetAvailability();
         }
         private void LyncClient_StateChanged(object sender, ClientStateChangedEventArgs e)
         {
@@ -86,120 +119,120 @@ namespace LyncStatusforRGBDevices
                     DoLoginTasks();
                     break;
                 case ClientState.SigningOut:
-                    LogitechGSDK.LogiLedShutdown();
+                    //TODO: Signing out logic.
                     break;
             }
         }
-        private void ConversationRemoved(object sender, ConversationManagerEventArgs e)
-        {
-            //e.Conversation.Participants
-        }
         private void ConversationAdded(object sender, ConversationManagerEventArgs e)
         {
-            var call = (AVModality)e.Conversation.Modalities[ModalityTypes.AudioVideo];
-            var im = (InstantMessageModality)e.Conversation.Modalities[ModalityTypes.InstantMessage];
-
-            if (call.State == ModalityState.Notified)
-            {
-                CallStatusChanged?.Invoke(CallState.Ringing);
-                LogitechGSDK.LogiLedFlashLighting(0, 0, 100, LogitechGSDK.LOGI_LED_DURATION_INFINITE, 200);
-                e.Conversation.Modalities[ModalityTypes.AudioVideo].ModalityStateChanged += CallStateChanged;
-                return;
-            }
-            if (im.State == ModalityState.Notified)
-            {
-                MessageReceived?.Invoke(MessageState.New);
-                LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
-                while (im.State == ModalityState.Notified)
-                {
-                    Thread.Sleep(5000);
-                    LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 250);
-                    SetLEDToCurrentStatus();
-                }
-            }
-            foreach (var p in e.Conversation.Participants)
-            {
-                if (!p.IsSelf && !p.IsMuted)
-                {
-                    im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
-                    call = (AVModality)p.Modalities[ModalityTypes.AudioVideo];
-
-                    im.InstantMessageReceived += Im_InstantMessageReceived;
-                    call.ModalityStateChanged += CallStateChanged;
-                }
-            }
-
-        }
-        private void Im_InstantMessageReceived(object sender, MessageSentEventArgs e)
+            watcherList.Add(new ConversationWatcher(e.Conversation));
+        }        
+        private static void CallModalityUpdated(object sender, ModalityStateChangedEventArgs e)
         {
-            MessageReceived?.Invoke(MessageState.Updated);
-            LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 200);
-            SetLEDToCurrentStatus();
-        }
-        private void CallStateChanged(object sender, ModalityStateChangedEventArgs e)
-        {
-            if (e.NewState == ModalityState.Connected)
-            {
-                CallStatusChanged?.Invoke(CallState.Connected);
-                LogitechGSDK.LogiLedPulseLighting(100, 0, 0, 7200000, 800);
-            }
-            else if (e.NewState == ModalityState.Disconnected)
-            {
-                CallStatusChanged?.Invoke(CallState.Ended);
-                LogitechGSDK.LogiLedStopEffects();
-            }
+            if (e.NewState == ModalityState.Connected) CallStatusChanged?.Invoke(CallState.Connected);
+            else if (e.NewState == ModalityState.Disconnected) CallStatusChanged?.Invoke(CallState.Ended);
         }
         private void OwnInfoHasChanged(object sender, ContactInformationChangedEventArgs e)
         {
             if (self.Contact != null && e.ChangedContactInformation.Contains(ContactInformationType.Availability))
-            {
-                if (AvailabilityChanged != null)
-                {
-                    switch ((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability))
-                    {
-                        case ContactAvailability.DoNotDisturb:
-                            AvailabilityChanged(Availability.DoNotDisturb);
-                            break;
-                        case ContactAvailability.Free:
-                            AvailabilityChanged(Availability.Free);
-                            break;
-                        case ContactAvailability.Busy:
-                            AvailabilityChanged(Availability.Busy);
-                            break;
-                        case ContactAvailability.Away:
-                        case ContactAvailability.TemporarilyAway:
-                            AvailabilityChanged(Availability.Away);
-                            break;
-                        case ContactAvailability.FreeIdle:
-                        case ContactAvailability.BusyIdle:
-                            AvailabilityChanged(Availability.Idle);
-                            break;
-                    } 
-                }
-                SetLEDToCurrentStatus();
-            }
+                if (AvailabilityChanged != null) SetAvailability();
         }
-        private void SetLEDToCurrentStatus()
+        private void SetAvailability()
         {
             switch ((ContactAvailability)self.Contact.GetContactInformation(ContactInformationType.Availability))
             {
                 case ContactAvailability.DoNotDisturb:
-                    LogitechGSDK.LogiLedSetLighting(100, 0, 100);
+                    UserStatus = Availability.DoNotDisturb;
                     break;
                 case ContactAvailability.Free:
-                    LogitechGSDK.LogiLedSetLighting(0, 100, 0);
+                    UserStatus = Availability.Free;
                     break;
                 case ContactAvailability.Busy:
-                    LogitechGSDK.LogiLedSetLighting(100, 0, 0);
+                    UserStatus = Availability.Busy;
                     break;
                 case ContactAvailability.Away:
+                case ContactAvailability.TemporarilyAway:
+                    UserStatus = Availability.Away;
+                    break;
                 case ContactAvailability.FreeIdle:
                 case ContactAvailability.BusyIdle:
-                case ContactAvailability.TemporarilyAway:
-                    LogitechGSDK.LogiLedSetLighting(100, 75, 0);
+                    UserStatus = Availability.Idle;
                     break;
             }
+        }
 
+        private class ConversationWatcher
+        {
+            private readonly InstantMessageModality im;
+            private readonly AVModality call;
+            private readonly ManualResetEventSlim msgAck = new ManualResetEventSlim(true);
+            private readonly Conversation conversation;
+
+            public bool IsAcknowledged { get; set; }
+
+            public event EventHandler OnMsgAck;
+
+            public ConversationWatcher(Conversation c)
+            {
+                conversation = c;
+                im = (InstantMessageModality)c.Modalities[ModalityTypes.InstantMessage];
+                call = (AVModality)c.Modalities[ModalityTypes.AudioVideo];
+                ThreadPool.QueueUserWorkItem(WatcherThread);
+            }
+            private void WatcherThread(object o)
+            {
+                conversation.ConversationManager.ConversationRemoved += ConversationRemoved;
+
+                if (call.State == ModalityState.Notified) CallStatusChanged?.Invoke(CallState.Ringing);
+
+                else if (im.State == ModalityState.Notified)
+                {
+                    msgAck.Reset();
+                    SetMessageAsNew();
+                }
+                foreach (var p in conversation.Participants)
+                {
+                    if (!p.IsSelf && !p.IsMuted)
+                    {
+                        var p_im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
+                        var p_call = (AVModality)p.Modalities[ModalityTypes.AudioVideo];
+
+                        p_im.InstantMessageReceived += Im_InstantMessageReceived;
+                        p_im.ModalityStateChanged += WaitForNewMessage;
+                        p_call.ModalityStateChanged += CallModalityUpdated;
+                    }
+                }                
+            }
+
+            private void SetMessageAsNew()
+            {                
+                im.ModalityStateChanged += WaitForReceipt;
+                MessageReceived?.Invoke(MessageState.New);
+                msgAck.Wait();
+                MessageReceived?.Invoke(MessageState.Opened);
+            }
+
+            private void ConversationRemoved(object sender, ConversationManagerEventArgs e)
+            {
+                if (e.Conversation == this.conversation)
+                {
+                    conversation.ConversationManager.ConversationRemoved -= ConversationRemoved;
+                    watcherList.Remove(this);
+                }
+            }
+            private void WaitForReceipt(object sender, ModalityStateChangedEventArgs e)
+            {
+                msgAck.Set();
+                im.ModalityStateChanged -= WaitForReceipt;
+            }
+            private void WaitForNewMessage(object sender, ModalityStateChangedEventArgs e)
+            {
+                if (e.NewState == ModalityState.Notified) SetMessageAsNew();
+            }
+            private static void Im_InstantMessageReceived(object sender, MessageSentEventArgs e)
+            {
+                MessageReceived?.Invoke(MessageState.Updated);
+            }
         }
     }
 }
