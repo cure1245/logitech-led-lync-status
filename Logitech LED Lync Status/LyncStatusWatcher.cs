@@ -26,8 +26,6 @@ namespace LyncStatusforRGBDevices
         public static event InstantMessageHandler MessageStateChanged;
         public static event CallStateHandler CallStateChanged;
         public static event EventHandler MessageReceived;
-        public static event EventHandler ClientIsReady;
-        public static bool IsClientConnected { get; set; }
 
         private static MessageState currentMsgState = MessageState.NoUpdate;
         public static MessageState CurrentMsgState
