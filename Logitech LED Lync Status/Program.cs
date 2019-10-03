@@ -41,15 +41,13 @@ namespace LyncStatusforRGBDevices
         {
             LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
         }
-
         static void ResetStatusWatcher()
         {            
             statusWatcher = new LyncStatusWatcher();
             statusWatcher.InitializeClient();
-            LogitechGSDK.LogiLedInitWithName("Skype for Business Status");            
+            LedSdkAbstraction.Initialize(Sdk.Logitech, "Skype for Business Status");            
             SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
         }
-
         private static void MsgStatusUpdated(MessageState state)
         {
             switch (state)
@@ -93,17 +91,17 @@ namespace LyncStatusforRGBDevices
             switch (availability)
             {
                 case Availability.DoNotDisturb:
-                    LogitechGSDK.LogiLedSetLighting(100, 0, 100);
+                    LedSdkAbstraction.SetLighting(Sdk.Logitech, 100, 0, 100);
                     break;
                 case Availability.Free:
-                    LogitechGSDK.LogiLedSetLighting(0, 100, 0);
+                    LedSdkAbstraction.SetLighting(Sdk.Logitech, 0, 100, 0);
                     break;
                 case Availability.Busy:
-                    LogitechGSDK.LogiLedSetLighting(100, 0, 0);
+                    LedSdkAbstraction.SetLighting(Sdk.Logitech, 100, 0, 0);
                     break;
                 case Availability.Away:
                 case Availability.Idle:
-                    LogitechGSDK.LogiLedSetLighting(100, 75, 0);
+                    LedSdkAbstraction.SetLighting(Sdk.Logitech, 100, 75, 0);
                     break;
             }
         }
