@@ -4,7 +4,7 @@ using System.Text;
 
 namespace LedCSharp
 {
-    public enum keyboardNames
+    public enum KeyboardNames
     {
         ESC = 0x01,
         F1 = 0x3b,
@@ -196,7 +196,7 @@ namespace LedCSharp
         public static extern bool LogiLedStopEffects();
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool LogiLedExcludeKeysFromBitmap(keyboardNames[] keyList, int listCount);
+        public static extern bool LogiLedExcludeKeysFromBitmap(KeyboardNames[] keyList, int listCount);
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
         public static extern bool LogiLedSetLightingFromBitmap(byte[] bitmap);
@@ -211,22 +211,22 @@ namespace LedCSharp
         public static extern bool LogiLedSetLightingForKeyWithQuartzCode(int keyCode, int redPercentage, int greenPercentage, int bluePercentage);
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool LogiLedSetLightingForKeyWithKeyName(keyboardNames keyCode, int redPercentage, int greenPercentage, int bluePercentage);
+        public static extern bool LogiLedSetLightingForKeyWithKeyName(KeyboardNames keyCode, int redPercentage, int greenPercentage, int bluePercentage);
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool LogiLedSaveLightingForKey(keyboardNames keyName);
+        public static extern bool LogiLedSaveLightingForKey(KeyboardNames keyName);
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool LogiLedRestoreLightingForKey(keyboardNames keyName);
+        public static extern bool LogiLedRestoreLightingForKey(KeyboardNames keyName);
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool LogiLedFlashSingleKey(keyboardNames keyName, int redPercentage, int greenPercentage, int bluePercentage, int msDuration, int msInterval);
+        public static extern bool LogiLedFlashSingleKey(KeyboardNames keyName, int redPercentage, int greenPercentage, int bluePercentage, int msDuration, int msInterval);
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool LogiLedPulseSingleKey(keyboardNames keyName, int startRedPercentage, int startGreenPercentage, int startBluePercentage, int finishRedPercentage, int finishGreenPercentage, int finishBluePercentage, int msDuration, bool isInfinite);
+        public static extern bool LogiLedPulseSingleKey(KeyboardNames keyName, int startRedPercentage, int startGreenPercentage, int startBluePercentage, int finishRedPercentage, int finishGreenPercentage, int finishBluePercentage, int msDuration, bool isInfinite);
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool LogiLedStopEffectsOnKey(keyboardNames keyName);
+        public static extern bool LogiLedStopEffectsOnKey(KeyboardNames keyName);
 
         [DllImport("LogitechLedEnginesWrapper ", CallingConvention = CallingConvention.Cdecl)]
         public static extern bool LogiLedSetLightingForTargetZone(DeviceType deviceType, int zone, int redPercentage, int greenPercentage, int bluePercentage);
