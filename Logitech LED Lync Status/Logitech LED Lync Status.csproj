@@ -89,9 +89,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Logitech SDK\LogitechLedEnginesWrapper.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Include="Logitech SDK\LogitechLedEnginesWrapper.dll" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Icon0.ico" />
@@ -104,4 +102,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\CUE.NET.1.2.0.1\build\net45\CUE.NET.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CUE.NET.1.2.0.1\build\net45\CUE.NET.targets'))" />
   </Target>
+  <PropertyGroup>
+    <PostBuildEvent>copy "$(ProjectDir)\Logitech SDK\LogitechLedEnginesWrapper.dll" "$(TargetDir)"</PostBuildEvent>
+  </PropertyGroup>
 </Project>
