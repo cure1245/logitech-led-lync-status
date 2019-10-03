@@ -33,7 +33,7 @@ namespace LyncStatusforRGBDevices
             if (sdk == Sdk.Logitech) LogitechGSDK.LogiLedShutdown();
             if (sdk == Sdk.Corsair) throw new NotImplementedException();
         }
-        public static bool SetLighting(Sdk sdk, int red, int blue, int green)
+        public static bool SetLighting(Sdk sdk, int red, int green, int blue)
         {
             if (red < 0 || red > 100)
                 throw new ArgumentOutOfRangeException("red", red, COLOR_OUT_OF_RANGE);
@@ -42,7 +42,7 @@ namespace LyncStatusforRGBDevices
             if (green < 0 || green > 100)
                 throw new ArgumentOutOfRangeException("green", green, COLOR_OUT_OF_RANGE);
 
-            if (sdk == Sdk.Logitech) return LogitechGSDK.LogiLedSetLighting(red, blue, green);
+            if (sdk == Sdk.Logitech) return LogitechGSDK.LogiLedSetLighting(red, green, blue);
 
             if (sdk == Sdk.Corsair)
             {
