@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using LedCSharp;
 
 namespace LyncStatusforRGBDevices
@@ -43,7 +42,7 @@ namespace LyncStatusforRGBDevices
             if (green < 0 || green > 100)
                 throw new ArgumentOutOfRangeException("green", green, COLOR_OUT_OF_RANGE);
 
-            if (sdk == Sdk.Logitech) return LogitechGSDK.LogiLedSetLighting(red, green, blue);
+            if (sdk == Sdk.Logitech) return LogitechGSDK.LogiLedSetLighting(red, blue, green);
 
             if (sdk == Sdk.Corsair)
             {
