@@ -8,14 +8,9 @@ using System.Windows.Forms;
 
 namespace LyncStatusforRGBDevices
 {
-    public enum CallState { Ringing, Connected, Ended }
+    public enum CallState { Ringing, Connected, NoUpdate }
     public enum Availability { Free, Busy, Away, Idle, DoNotDisturb }
-    public enum MessageState
-    {
-        New,
-        Updated,
-        Opened
-    }
+    public enum MessageState { New, Updated, NoUpdate }
 
     public delegate void CallStateHandler(CallState state);
     public delegate void AvailabilityHandler(Availability availability);
@@ -28,18 +23,29 @@ namespace LyncStatusforRGBDevices
         private static readonly List<ConversationWatcher> watcherList = new List<ConversationWatcher>();
 
         public static event AvailabilityHandler AvailabilityChanged;
-        public static event InstantMessageHandler MessageReceived;
-        public static event CallStateHandler CallStatusChanged;
-        public event EventHandler OnClientReady;
+        public static event InstantMessageHandler MessageStateChanged;
+        public static event CallStateHandler CallStateChanged;
+        public static event EventHandler MessageReceived;
+        public event EventHandler ClientIsReady;
 
-        private static MessageState currentMsgState;
+        private static MessageState currentMsgState = MessageState.NoUpdate;
         public static MessageState CurrentMsgState
         {
             get => currentMsgState;
             private set
             {
                 currentMsgState = value;
-                MessageReceived?.Invoke(value);
+                MessageStateChanged?.Invoke(value);
+            }
+        }
+        private static CallState currentCallState = CallState.NoUpdate;
+        public static CallState CurrentCallState
+        {
+            get => currentCallState;
+            set
+            {
+                currentCallState = value;
+                CallStateChanged?.Invoke(value);
             }
         }
 
@@ -50,11 +56,10 @@ namespace LyncStatusforRGBDevices
             set
             {
                 isClientConnected = value;
-                OnClientReady(this, new EventArgs());
             }
         }
-        private Availability userStatus;
-        public Availability UserStatus
+        private static Availability userStatus;
+        public static Availability UserStatus
         {
             get => userStatus;
             private set
@@ -63,8 +68,11 @@ namespace LyncStatusforRGBDevices
                 AvailabilityChanged?.Invoke(value);
             }
         }
-        public void InitializeClient()
+        public bool InitializeClient()
         {
+
+        //TODO: Move references to Forms to calling application.
+            bool rdy;
             try
             {
                 do
@@ -72,30 +80,32 @@ namespace LyncStatusforRGBDevices
                     lyncClient = null;
                     lyncClient = LyncClient.GetClient();
                 } while (lyncClient.State == ClientState.Invalid);
+
+                IsClientConnected = true;
             }
             catch (ClientNotFoundException)
             {
                 var result = MessageBox.Show("Skype for Business is not running!", "Error accessing Lync client", MessageBoxButtons.RetryCancel);
-                if (result == DialogResult.Cancel) Environment.Exit(1);
-                else InitializeClient();
-                return;
+                if (result == DialogResult.Cancel) rdy = false;
+                else rdy = InitializeClient();
+                return rdy;
             }
             catch (LyncClientException e)
             {
                 var result = MessageBox.Show(e.Message, "Error accessing Lync client", MessageBoxButtons.RetryCancel);
-                if (result == DialogResult.Cancel) Environment.Exit(1);
-                else InitializeClient();
-                return;
+                if (result == DialogResult.Cancel) rdy = false;
+                else rdy = InitializeClient();
+                return rdy;
             }
             SubscribeToClientEvents();
             if (lyncClient.State == ClientState.SignedIn) DoLoginTasks();
-            IsClientConnected = true;
+            rdy = true;
+            return rdy;
         }
         private void SubscribeToClientEvents()
         {
             lyncClient.StateChanged += LyncClient_StateChanged;
             lyncClient.ConversationManager.ConversationAdded += ConversationAdded;
-            //lyncClient.ConversationManager.ConversationRemoved += ConversationRemoved;
         }
         private void SubscribeToSelfEvents()
         {
@@ -105,9 +115,8 @@ namespace LyncStatusforRGBDevices
         private void DoLoginTasks()
         {
             foreach (var c in lyncClient.ConversationManager.Conversations)
-            {
                 watcherList.Add(new ConversationWatcher(c));
-            }
+
             SubscribeToSelfEvents();
             SetAvailability();
         }
@@ -119,18 +128,18 @@ namespace LyncStatusforRGBDevices
                     DoLoginTasks();
                     break;
                 case ClientState.SigningOut:
-                    //TODO: Signing out logic.
+                    watcherList.Clear();
                     break;
             }
         }
         private void ConversationAdded(object sender, ConversationManagerEventArgs e)
         {
             watcherList.Add(new ConversationWatcher(e.Conversation));
-        }        
+        }
         private static void CallModalityUpdated(object sender, ModalityStateChangedEventArgs e)
         {
-            if (e.NewState == ModalityState.Connected) CallStatusChanged?.Invoke(CallState.Connected);
-            else if (e.NewState == ModalityState.Disconnected) CallStatusChanged?.Invoke(CallState.Ended);
+            if (e.NewState == ModalityState.Connected) CurrentCallState = CallState.Connected;
+            else if (e.NewState == ModalityState.Disconnected) CurrentCallState = CallState.NoUpdate;
         }
         private void OwnInfoHasChanged(object sender, ContactInformationChangedEventArgs e)
         {
@@ -168,10 +177,6 @@ namespace LyncStatusforRGBDevices
             private readonly ManualResetEventSlim msgAck = new ManualResetEventSlim(true);
             private readonly Conversation conversation;
 
-            public bool IsAcknowledged { get; set; }
-
-            public event EventHandler OnMsgAck;
-
             public ConversationWatcher(Conversation c)
             {
                 conversation = c;
@@ -182,14 +187,16 @@ namespace LyncStatusforRGBDevices
             private void WatcherThread(object o)
             {
                 conversation.ConversationManager.ConversationRemoved += ConversationRemoved;
+                im.ModalityStateChanged += MsgNotification;
+                call.ModalityStateChanged += CallNotification;
 
-                if (call.State == ModalityState.Notified) CallStatusChanged?.Invoke(CallState.Ringing);
+                //if (call.State == ModalityState.Notified) CurrentCallState = CallState.Ringing;
 
-                else if (im.State == ModalityState.Notified)
-                {
-                    msgAck.Reset();
-                    SetMessageAsNew();
-                }
+                //else if (im.State == ModalityState.Notified)
+                //{
+                //    msgAck.Reset();
+                //    SetMessageAsNew();
+                //}
                 foreach (var p in conversation.Participants)
                 {
                     if (!p.IsSelf && !p.IsMuted)
@@ -197,21 +204,26 @@ namespace LyncStatusforRGBDevices
                         var p_im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
                         var p_call = (AVModality)p.Modalities[ModalityTypes.AudioVideo];
 
-                        p_im.InstantMessageReceived += Im_InstantMessageReceived;
-                        p_im.ModalityStateChanged += WaitForNewMessage;
+                        p_im.InstantMessageReceived += (b, i) => MessageReceived(b, i);
                         p_call.ModalityStateChanged += CallModalityUpdated;
                     }
-                }                
+                }
             }
 
-            private void SetMessageAsNew()
-            {                
-                im.ModalityStateChanged += WaitForReceipt;
-                MessageReceived?.Invoke(MessageState.New);
+            private void CallNotification(object sender, ModalityStateChangedEventArgs e)
+            {
+                if (e.NewState == ModalityState.Notified) CurrentCallState = CallState.Ringing;
+                else if (e.NewState == ModalityState.Connected) CurrentCallState = CallState.Connected;
+                else if (e.NewState == ModalityState.Disconnected) CurrentCallState = CallState.NoUpdate;
+            }
+
+            private void SetMessageAsNew(object state)
+            {
+                im.ModalityStateChanged += WaitForMsgReceipt;
+                CurrentMsgState = MessageState.New;
                 msgAck.Wait();
-                MessageReceived?.Invoke(MessageState.Opened);
+                CurrentMsgState = MessageState.NoUpdate;
             }
-
             private void ConversationRemoved(object sender, ConversationManagerEventArgs e)
             {
                 if (e.Conversation == this.conversation)
@@ -220,18 +232,21 @@ namespace LyncStatusforRGBDevices
                     watcherList.Remove(this);
                 }
             }
-            private void WaitForReceipt(object sender, ModalityStateChangedEventArgs e)
+            private void WaitForMsgReceipt(object sender, ModalityStateChangedEventArgs e)
             {
-                msgAck.Set();
-                im.ModalityStateChanged -= WaitForReceipt;
+                if (e.NewState == ModalityState.Connected)
+                {
+                    msgAck.Set();
+                    im.ModalityStateChanged -= WaitForMsgReceipt;
+                }
             }
-            private void WaitForNewMessage(object sender, ModalityStateChangedEventArgs e)
+            private void MsgNotification(object sender, ModalityStateChangedEventArgs e)
             {
-                if (e.NewState == ModalityState.Notified) SetMessageAsNew();
-            }
-            private static void Im_InstantMessageReceived(object sender, MessageSentEventArgs e)
-            {
-                MessageReceived?.Invoke(MessageState.Updated);
+                if (e.NewState == ModalityState.Notified)
+                {
+                    msgAck.Reset();
+                    ThreadPool.QueueUserWorkItem(SetMessageAsNew);
+                }
             }
         }
     }

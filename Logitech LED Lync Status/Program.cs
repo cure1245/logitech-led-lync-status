@@ -9,8 +9,6 @@ namespace LyncStatusforRGBDevices
     static class Program
     {
         static LyncStatusWatcher statusWatcher;
-        static readonly ManualResetEvent clientReady = new ManualResetEvent(false);
-        static bool msgWaiting = false;
 
         /// <summary>
         /// The main entry point for the application.
@@ -29,32 +27,35 @@ namespace LyncStatusforRGBDevices
                 icon.ContextMenu = new ContextMenu(new MenuItem[] { reload, exit });
                 icon.Visible = true;
 
+                LyncStatusWatcher.AvailabilityChanged += SetLEDToCurrentStatus;
+                LyncStatusWatcher.CallStateChanged += CallStatusUpdated;
+                LyncStatusWatcher.MessageStateChanged += MsgStatusUpdated;
+                LyncStatusWatcher.MessageReceived += MsgReceived;
                 ResetStatusWatcher();
                 Application.Run();
                 icon.Visible = false;
             }
         }
+
+        private static void MsgReceived(object sender, EventArgs e)
+        {
+            LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
+        }
+
         static void ResetStatusWatcher()
         {            
             statusWatcher = new LyncStatusWatcher();
-            statusWatcher.OnClientReady += StatusWatcher_OnClientReady;
             statusWatcher.InitializeClient();
-            clientReady.WaitOne();
-            LogitechGSDK.LogiLedInitWithName("Skype for Business Status");
-            LyncStatusWatcher.AvailabilityChanged += SetLEDToCurrentStatus;
-            LyncStatusWatcher.CallStatusChanged += StatusWatcher_CallStatusChanged;
-            LyncStatusWatcher.MessageReceived += StatusWatcher_MessageReceived;
-            SetLEDToCurrentStatus(statusWatcher.UserStatus);
+            LogitechGSDK.LogiLedInitWithName("Skype for Business Status");            
+            SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
         }
 
-        private static void StatusWatcher_MessageReceived(MessageState state)
+        private static void MsgStatusUpdated(MessageState state)
         {
             switch (state)
             {
                 case MessageState.New:
-                    LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
-                    if (msgWaiting) return;
-                    msgWaiting = true;
+                    LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);                    
                     ThreadPool.QueueUserWorkItem(FlashForWaitingMsg);
                     break;
                 case MessageState.Updated:
@@ -62,29 +63,16 @@ namespace LyncStatusforRGBDevices
                     break;
             }
         }
-
         private static void FlashForWaitingMsg(object state)
         {
             while (LyncStatusWatcher.CurrentMsgState == MessageState.New)
             {
                 Thread.Sleep(10000);
-                LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 200);
-                SetLEDToCurrentStatus(statusWatcher.UserStatus);
+                if (LyncStatusWatcher.CurrentMsgState == MessageState.New) LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 200);
+                SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
             }
-            msgWaiting = false;
         }
-
-        private static void StatusWatcher_OnMsgAck(object sender, EventArgs e)
-        {
-            msgWaiting = false;
-        }
-
-        private static void StatusWatcher_OnClientReady(object sender, EventArgs e)
-        {
-            clientReady.Set();
-        }
-
-        private static void StatusWatcher_CallStatusChanged(CallState state)
+        private static void CallStatusUpdated(CallState state)
         {
             switch (state)
             {
@@ -94,12 +82,12 @@ namespace LyncStatusforRGBDevices
                 case CallState.Connected:
                     LogitechGSDK.LogiLedPulseLighting(100, 0, 0, Int32.MaxValue, 800);
                     break;
-                case CallState.Ended:
-                    SetLEDToCurrentStatus(statusWatcher.UserStatus);
+                case CallState.NoUpdate:
+                    LogitechGSDK.LogiLedStopEffects();
+                    SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
                     break;
             }
         }
-
         static void SetLEDToCurrentStatus(Availability availability)
         {
             switch (availability)
