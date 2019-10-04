@@ -59,6 +59,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="LedSdkAbstraction.cs" />
     <Compile Include="LyncStatusWatcher.cs" />
     <Compile Include="Logitech SDK\LogitechGSDK.cs" />
