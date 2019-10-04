@@ -7,7 +7,7 @@ using CUE.NET.Devices.Generic;
 
 namespace LyncStatusforRGBDevices
 {
-    public enum Sdk { Logitech, Corsair }
+    public enum LedSdk { Logitech, Corsair }
     static class LedSdkAbstraction
     {
         private const string COLOR_OUT_OF_RANGE = "Color values must be between 0-100";
@@ -20,10 +20,10 @@ namespace LyncStatusforRGBDevices
             byte[] vs = { (byte)r, (byte)g, (byte)b };
             return vs;
         }
-        public static bool Initialize(Sdk sdk)
+        public static bool Initialize(LedSdk sdk)
         {
-            if (sdk == Sdk.Logitech) return LogitechGSDK.LogiLedInit();
-            if (sdk == Sdk.Corsair)
+            if (sdk == LedSdk.Logitech) return LogitechGSDK.LogiLedInit();
+            if (sdk == LedSdk.Corsair)
             {
                 CueSDK.Initialize(true);
                 return true;
@@ -31,10 +31,10 @@ namespace LyncStatusforRGBDevices
 
             return false;
         }
-        public static bool Initialize(Sdk sdk, string name)
+        public static bool Initialize(LedSdk sdk, string name)
         {
-            if (sdk == Sdk.Logitech) return LogitechGSDK.LogiLedInitWithName(name);
-            if (sdk == Sdk.Corsair)
+            if (sdk == LedSdk.Logitech) return LogitechGSDK.LogiLedInitWithName(name);
+            if (sdk == LedSdk.Corsair)
             {
                 CueSDK.Initialize(true);
                 CueSDK.UpdateMode = CUE.NET.Devices.Generic.Enums.UpdateMode.Continuous;
@@ -44,17 +44,17 @@ namespace LyncStatusforRGBDevices
 
             return false;
         }
-        public static void Shutdown(Sdk sdk)
+        public static void Shutdown(LedSdk sdk)
         {
-            if (sdk == Sdk.Logitech) LogitechGSDK.LogiLedShutdown();
-            if (sdk == Sdk.Corsair) CueSDK.Reinitialize();
+            if (sdk == LedSdk.Logitech) LogitechGSDK.LogiLedShutdown();
+            if (sdk == LedSdk.Corsair) CueSDK.Reinitialize();
         }
-        public static bool SetLighting(Sdk sdk, int red, int green, int blue)
+        public static bool SetLighting(LedSdk sdk, int red, int green, int blue)
         {
             CheckRgbValues(red, green, blue);
-            if (sdk == Sdk.Logitech) return LogitechGSDK.LogiLedSetLighting(red, green, blue);
+            if (sdk == LedSdk.Logitech) return LogitechGSDK.LogiLedSetLighting(red, green, blue);
 
-            if (sdk == Sdk.Corsair)
+            if (sdk == LedSdk.Corsair)
             {
                 CueSDK.HeadsetSDK.Brush.Effects.Clear();
                 byte[] rgb = ConvertPercentagesToRgbValues(red, green, blue);
@@ -63,15 +63,15 @@ namespace LyncStatusforRGBDevices
             }
             return false;
         }
-        public static bool FlashLighting(Sdk sdk, int red, int green, int blue, int duration, int interval)
+        public static bool FlashLighting(LedSdk sdk, int red, int green, int blue, int duration, int interval)
         {
             CheckRgbValues(red, green, blue);
-            if (sdk == Sdk.Logitech)
+            if (sdk == LedSdk.Logitech)
             {
                 LogitechGSDK.LogiLedFlashLighting(red, green, blue, duration, interval);
                 return true;
             }
-            if (sdk == Sdk.Corsair)
+            if (sdk == LedSdk.Corsair)
             {
                 CueSDK.HeadsetSDK.Brush.Effects.Clear();
                 byte[] rgb = ConvertPercentagesToRgbValues(red, green, blue);
@@ -90,15 +90,15 @@ namespace LyncStatusforRGBDevices
             }
             return false;
         }
-        public static bool PulseLighting(Sdk sdk, int red, int green, int blue, int duration, int interval)
+        public static bool PulseLighting(LedSdk sdk, int red, int green, int blue, int duration, int interval)
         {
             CheckRgbValues(red, green, blue);
-            if (sdk == Sdk.Logitech)
+            if (sdk == LedSdk.Logitech)
             {
                 LogitechGSDK.LogiLedPulseLighting(red, green, blue, duration, interval);
                 return true;
             }
-            if (sdk == Sdk.Corsair)
+            if (sdk == LedSdk.Corsair)
             {
                 CueSDK.HeadsetSDK.Brush.Effects.Clear();
                 byte[] rgb = ConvertPercentagesToRgbValues(red, green, blue);
