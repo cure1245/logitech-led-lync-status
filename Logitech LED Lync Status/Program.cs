@@ -7,6 +7,7 @@ namespace LyncStatusforRGBDevices
 {
     static class Program
     {
+        static LedSdk currentSdk = LedSdk.Logitech;
         static LyncStatusWatcher statusWatcher;
 
         /// <summary>
@@ -38,12 +39,12 @@ namespace LyncStatusforRGBDevices
 
         private static void MsgReceived(object sender, EventArgs e)
         {
-            LedSdkAbstraction.FlashLighting(Sdk.Corsair, 0, 0, 100, 2000, 200);
+            LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 2000, 200);
         }
         static void ResetStatusWatcher()
         {            
             statusWatcher = new LyncStatusWatcher();
-            LedSdkAbstraction.Initialize(Sdk.Corsair, "Skype for Business Status");            
+            LedSdkAbstraction.Initialize(currentSdk, "Skype for Business Status");            
             statusWatcher.InitializeClient();
             //SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
         }
@@ -52,11 +53,11 @@ namespace LyncStatusforRGBDevices
             switch (state)
             {
                 case MessageState.New:
-                    LedSdkAbstraction.FlashLighting(Sdk.Corsair, 0, 0, 100, 2000, 200);                    
+                    LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 2000, 200);                    
                     ThreadPool.QueueUserWorkItem(FlashForWaitingMsg);
                     break;
                 case MessageState.Updated:
-                    LedSdkAbstraction.FlashLighting(Sdk.Corsair, 0, 0, 100, 2000, 200);
+                    LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 2000, 200);
                     break;
             }
         }
@@ -66,7 +67,7 @@ namespace LyncStatusforRGBDevices
             {
                 Thread.Sleep(10000);
                 if (LyncStatusWatcher.CurrentMsgState == MessageState.New)
-                    LedSdkAbstraction.FlashLighting(Sdk.Corsair, 0, 0, 100, 1000, 200);
+                    LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 1000, 200);
                 SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
             }
         }
@@ -75,13 +76,13 @@ namespace LyncStatusforRGBDevices
             switch (state)
             {
                 case CallState.Ringing:
-                    LedSdkAbstraction.FlashLighting(Sdk.Corsair, 0, 0, 100, 120000, 200);
+                    LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 120000, 200);
                     break;
                 case CallState.Connected:
-                    LedSdkAbstraction.PulseLighting(Sdk.Corsair, 100, 0, 0, Int32.MaxValue, 800);
+                    LedSdkAbstraction.PulseLighting(currentSdk, 100, 0, 0, Int32.MaxValue, 800);
                     break;
                 case CallState.NoUpdate:
-                    LedSdkAbstraction.Shutdown(Sdk.Corsair);
+                    LedSdkAbstraction.Shutdown(currentSdk);
                     SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
                     break;
             }
@@ -91,17 +92,17 @@ namespace LyncStatusforRGBDevices
             switch (availability)
             {
                 case Availability.DoNotDisturb:
-                    LedSdkAbstraction.SetLighting(Sdk.Corsair, 100, 0, 100);
+                    LedSdkAbstraction.SetLighting(currentSdk, 100, 0, 100);
                     break;
                 case Availability.Free:
-                    LedSdkAbstraction.SetLighting(Sdk.Corsair, 0, 100, 0);
+                    LedSdkAbstraction.SetLighting(currentSdk, 0, 100, 0);
                     break;
                 case Availability.Busy:
-                    LedSdkAbstraction.SetLighting(Sdk.Corsair, 100, 0, 0);
+                    LedSdkAbstraction.SetLighting(currentSdk, 100, 0, 0);
                     break;
                 case Availability.Away:
                 case Availability.Idle:
-                    LedSdkAbstraction.SetLighting(Sdk.Corsair, 100, 75, 0);
+                    LedSdkAbstraction.SetLighting(currentSdk, 100, 75, 0);
                     break;
             }
         }
