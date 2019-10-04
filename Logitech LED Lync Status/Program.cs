@@ -1,5 +1,4 @@
-﻿using LedCSharp;
-using System;
+﻿using System;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
@@ -39,7 +38,7 @@ namespace LyncStatusforRGBDevices
 
         private static void MsgReceived(object sender, EventArgs e)
         {
-            LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
+            LedSdkAbstraction.FlashLighting(Sdk.Logitech, 0, 0, 100, 2000, 200);
         }
         static void ResetStatusWatcher()
         {            
@@ -53,11 +52,11 @@ namespace LyncStatusforRGBDevices
             switch (state)
             {
                 case MessageState.New:
-                    LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);                    
+                    LedSdkAbstraction.FlashLighting(Sdk.Logitech, 0, 0, 100, 2000, 200);                    
                     ThreadPool.QueueUserWorkItem(FlashForWaitingMsg);
                     break;
                 case MessageState.Updated:
-                    LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 2000, 200);
+                    LedSdkAbstraction.FlashLighting(Sdk.Logitech, 0, 0, 100, 2000, 200);
                     break;
             }
         }
@@ -66,7 +65,8 @@ namespace LyncStatusforRGBDevices
             while (LyncStatusWatcher.CurrentMsgState == MessageState.New)
             {
                 Thread.Sleep(10000);
-                if (LyncStatusWatcher.CurrentMsgState == MessageState.New) LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 1000, 200);
+                if (LyncStatusWatcher.CurrentMsgState == MessageState.New)
+                    LedSdkAbstraction.FlashLighting(Sdk.Logitech, 0, 0, 100, 1000, 200);
                 SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
             }
         }
@@ -75,13 +75,13 @@ namespace LyncStatusforRGBDevices
             switch (state)
             {
                 case CallState.Ringing:
-                    LogitechGSDK.LogiLedFlashLighting(0, 0, 100, 120000, 200);
+                    LedSdkAbstraction.FlashLighting(Sdk.Logitech, 0, 0, 100, 120000, 200);
                     break;
                 case CallState.Connected:
-                    LogitechGSDK.LogiLedPulseLighting(100, 0, 0, Int32.MaxValue, 800);
+                    LedSdkAbstraction.PulseLighting(Sdk.Logitech, 100, 0, 0, Int32.MaxValue, 800);
                     break;
                 case CallState.NoUpdate:
-                    LogitechGSDK.LogiLedStopEffects();
+                    LedSdkAbstraction.Shutdown(Sdk.Logitech);
                     SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
                     break;
             }
