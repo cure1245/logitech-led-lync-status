@@ -9,7 +9,7 @@ using System.Windows.Forms;
 namespace LyncStatusforRGBDevices
 {
     public enum CallState { Ringing, Connected, NoUpdate }
-    public enum Availability { Free, Busy, Away, Idle, DoNotDisturb }
+    public enum Availability { Unknown, Free, Busy, Away, Idle, DoNotDisturb }
     public enum MessageState { New, Updated, NoUpdate }
 
     public delegate void CallStateHandler(CallState state);
@@ -27,6 +27,7 @@ namespace LyncStatusforRGBDevices
         public static event CallStateHandler CallStateChanged;
         public static event EventHandler MessageReceived;
         public event EventHandler ClientIsReady;
+        public bool IsClientConnected { get; set; }
 
         private static MessageState currentMsgState = MessageState.NoUpdate;
         public static MessageState CurrentMsgState
@@ -41,6 +42,7 @@ namespace LyncStatusforRGBDevices
                 }
             }
         }
+
         private static CallState currentCallState = CallState.NoUpdate;
         public static CallState CurrentCallState
         {
@@ -55,25 +57,20 @@ namespace LyncStatusforRGBDevices
             }
         }
 
-        private bool isClientConnected;
-        public bool IsClientConnected
-        {
-            get => isClientConnected;
-            set
-            {
-                isClientConnected = value;
-            }
-        }
-        private static Availability userStatus;
+        private static Availability userStatus = Availability.Unknown;
         public static Availability UserStatus
         {
             get => userStatus;
             private set
             {
-                userStatus = value;
-                AvailabilityChanged?.Invoke(value);
+                if (userStatus != value)
+                {
+                    userStatus = value;
+                    AvailabilityChanged?.Invoke(value);
+                }
             }
         }
+
         public bool InitializeClient()
         {
 
