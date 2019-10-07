@@ -34,18 +34,24 @@ namespace LyncStatusforRGBDevices
             get => currentMsgState;
             private set
             {
-                currentMsgState = value;
-                MessageStateChanged?.Invoke(value);
+                if (currentMsgState != value)
+                {
+                    currentMsgState = value;
+                    MessageStateChanged?.Invoke(value);
+                }
             }
         }
         private static CallState currentCallState = CallState.NoUpdate;
         public static CallState CurrentCallState
         {
             get => currentCallState;
-            set
+            private set
             {
-                currentCallState = value;
-                CallStateChanged?.Invoke(value);
+                if (currentCallState != value)
+                {
+                    currentCallState = value;
+                    CallStateChanged?.Invoke(value);
+                }
             }
         }
 
@@ -71,8 +77,10 @@ namespace LyncStatusforRGBDevices
         public bool InitializeClient()
         {
 
-        //TODO: Move references to Forms to calling application.
+            //TODO: Move references to Forms to calling application.
             bool rdy;
+
+            //try to get a new instance of a running lync client.
             try
             {
                 do
@@ -105,7 +113,8 @@ namespace LyncStatusforRGBDevices
         private void SubscribeToClientEvents()
         {
             lyncClient.StateChanged += LyncClient_StateChanged;
-            lyncClient.ConversationManager.ConversationAdded += ConversationAdded;
+            lyncClient.ConversationManager.ConversationAdded += Manager_ConversationAdded;
+            lyncClient.ConversationManager.ConversationRemoved += Manager_ConversationRemoved;
         }
         private void SubscribeToSelfEvents()
         {
@@ -132,14 +141,15 @@ namespace LyncStatusforRGBDevices
                     break;
             }
         }
-        private void ConversationAdded(object sender, ConversationManagerEventArgs e)
+        private void Manager_ConversationAdded(object sender, ConversationManagerEventArgs e)
         {
             watcherList.Add(new ConversationWatcher(e.Conversation));
         }
-        private static void CallModalityUpdated(object sender, ModalityStateChangedEventArgs e)
+        private void Manager_ConversationRemoved(object sender, ConversationManagerEventArgs e)
         {
-            if (e.NewState == ModalityState.Connected) CurrentCallState = CallState.Connected;
-            else if (e.NewState == ModalityState.Disconnected) CurrentCallState = CallState.NoUpdate;
+            var removed = watcherList.Find(c => c.Conversation == e.Conversation);
+            watcherList.Remove(removed);
+            removed.Dispose();
         }
         private void OwnInfoHasChanged(object sender, ContactInformationChangedEventArgs e)
         {
@@ -175,62 +185,52 @@ namespace LyncStatusforRGBDevices
             private readonly InstantMessageModality im;
             private readonly AVModality call;
             private readonly ManualResetEventSlim msgAck = new ManualResetEventSlim(true);
-            private readonly Conversation conversation;
+
+            public Conversation Conversation { get; }
 
             public ConversationWatcher(Conversation c)
             {
-                conversation = c;
+                Conversation = c;
                 im = (InstantMessageModality)c.Modalities[ModalityTypes.InstantMessage];
                 call = (AVModality)c.Modalities[ModalityTypes.AudioVideo];
                 ThreadPool.QueueUserWorkItem(WatcherThread);
             }
             private void WatcherThread(object o)
             {
-                conversation.ConversationManager.ConversationRemoved += ConversationRemoved;
                 im.ModalityStateChanged += MsgNotification;
-                call.ModalityStateChanged += CallNotification;
+                call.ModalityStateChanged += CallModalityChanged;
 
-                //if (call.State == ModalityState.Notified) CurrentCallState = CallState.Ringing;
-
-                //else if (im.State == ModalityState.Notified)
-                //{
-                //    msgAck.Reset();
-                //    SetMessageAsNew();
-                //}
-                foreach (var p in conversation.Participants)
+                foreach (var p in Conversation.Participants)
                 {
                     if (!p.IsSelf && !p.IsMuted)
                     {
                         var p_im = (InstantMessageModality)p.Modalities[ModalityTypes.InstantMessage];
-                        var p_call = (AVModality)p.Modalities[ModalityTypes.AudioVideo];
-
                         p_im.InstantMessageReceived += (b, i) => MessageReceived(b, i);
-                        p_call.ModalityStateChanged += CallModalityUpdated;
                     }
                 }
             }
 
-            private void CallNotification(object sender, ModalityStateChangedEventArgs e)
+            private void CallModalityChanged(object sender, ModalityStateChangedEventArgs e)
             {
-                if (e.NewState == ModalityState.Notified) CurrentCallState = CallState.Ringing;
-                else if (e.NewState == ModalityState.Connected) CurrentCallState = CallState.Connected;
-                else if (e.NewState == ModalityState.Disconnected) CurrentCallState = CallState.NoUpdate;
+                switch (e.NewState)
+                {
+                    case ModalityState.Notified:
+                        CurrentCallState = CallState.Ringing;
+                        break;
+                    case ModalityState.Connected:
+                        CurrentCallState = CallState.Connected;
+                        break;
+                    case ModalityState.Disconnected:
+                        CurrentCallState = CallState.NoUpdate;
+                        break;
+                }
             }
-
             private void SetMessageAsNew(object state)
             {
                 im.ModalityStateChanged += WaitForMsgReceipt;
                 CurrentMsgState = MessageState.New;
                 msgAck.Wait();
                 CurrentMsgState = MessageState.NoUpdate;
-            }
-            private void ConversationRemoved(object sender, ConversationManagerEventArgs e)
-            {
-                if (e.Conversation == this.conversation)
-                {
-                    conversation.ConversationManager.ConversationRemoved -= ConversationRemoved;
-                    watcherList.Remove(this);
-                }
             }
             private void WaitForMsgReceipt(object sender, ModalityStateChangedEventArgs e)
             {
@@ -248,43 +248,10 @@ namespace LyncStatusforRGBDevices
                     ThreadPool.QueueUserWorkItem(SetMessageAsNew);
                 }
             }
-
-            #region IDisposable Support
-            private bool disposedValue = false; // To detect redundant calls
-
-            protected virtual void Dispose(bool disposing)
-            {
-                if (!disposedValue)
-                {
-                    if (disposing)
-                    {
-                        // TODO: dispose managed state (managed objects).
-                        msgAck.Dispose();
-                    }
-
-                    // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                    // TODO: set large fields to null.
-
-                    disposedValue = true;
-                }
-            }
-
-            // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-            // ~ConversationWatcher()
-            // {
-            //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            //   Dispose(false);
-            // }
-
-            // This code added to correctly implement the disposable pattern.
             public void Dispose()
             {
-                // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-                Dispose(true);
-                // TODO: uncomment the following line if the finalizer is overridden above.
-                // GC.SuppressFinalize(this);
+                msgAck.Dispose();
             }
-            #endregion
         }
     }
 }
