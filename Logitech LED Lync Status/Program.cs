@@ -69,7 +69,6 @@ namespace LyncStatusforRGBDevices
                 Thread.Sleep(10000);
                 if (LyncStatusWatcher.CurrentMsgState == MessageState.New)
                     LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 1000, 200);
-                SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
             }
         }
         private static void CallStatusUpdated(CallState state)
