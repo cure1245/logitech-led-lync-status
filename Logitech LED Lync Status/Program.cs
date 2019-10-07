@@ -44,6 +44,7 @@ namespace LyncStatusforRGBDevices
         static void ResetStatusWatcher()
         {            
             statusWatcher = new LyncStatusWatcher();
+            LedSdkAbstraction.Shutdown(currentSdk);
             LedSdkAbstraction.Initialize(currentSdk, "Skype for Business Status");            
             statusWatcher.InitializeClient();
             //SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
@@ -82,13 +83,13 @@ namespace LyncStatusforRGBDevices
                     LedSdkAbstraction.PulseLighting(currentSdk, 100, 0, 0, Int32.MaxValue, 800);
                     break;
                 case CallState.NoUpdate:
-                    LedSdkAbstraction.Shutdown(currentSdk);
                     SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
                     break;
             }
         }
         static void SetLEDToCurrentStatus(Availability availability)
         {
+            if (LyncStatusWatcher.CurrentCallState == CallState.Connected) return;
             switch (availability)
             {
                 case Availability.DoNotDisturb:
