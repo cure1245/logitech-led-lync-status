@@ -52,7 +52,11 @@ namespace LyncStatusforRGBDevices
         public static bool SetLighting(LedSdk sdk, int red, int green, int blue)
         {
             CheckRgbValues(red, green, blue);
-            if (sdk == LedSdk.Logitech) return LogitechGSDK.LogiLedSetLighting(red, green, blue);
+            if (sdk == LedSdk.Logitech)
+            {
+                LogitechGSDK.LogiLedStopEffects();
+                return LogitechGSDK.LogiLedSetLighting(red, green, blue);
+            }
 
             if (sdk == LedSdk.Corsair)
             {
