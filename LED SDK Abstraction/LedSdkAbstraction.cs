@@ -29,7 +29,6 @@ namespace LyncStatusforRGBDevices
                 CueSDK.Initialize(true);
                 return true;
             }
-
             return false;
         }
         public static bool Initialize(LedSdk sdk, string name)

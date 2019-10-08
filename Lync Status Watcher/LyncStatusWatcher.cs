@@ -15,17 +15,21 @@ namespace LyncStatusforRGBDevices
     public delegate void CallStateHandler(CallState state);
     public delegate void AvailabilityHandler(Availability availability);
     public delegate void InstantMessageHandler(MessageState state);
+    public delegate void ClientStatusHandler(bool clientRunning);
 
     public static class LyncStatusWatcher
     {
+        private static readonly List<ConversationWatcher> watcherList = new List<ConversationWatcher>();
+        private static readonly Thread processWatcher;
         private static LyncClient lyncClient;
         private static Self self;
-        private static readonly List<ConversationWatcher> watcherList = new List<ConversationWatcher>();
+        private static bool clientProcessIsRunning;
 
         public static event AvailabilityHandler AvailabilityChanged;
         public static event InstantMessageHandler MessageStateChanged;
         public static event CallStateHandler CallStateChanged;
         public static event EventHandler MessageReceived;
+        public static event ClientStatusHandler WatcherStatusChanged;
 
         private static MessageState currentMsgState = MessageState.NoUpdate;
         public static MessageState CurrentMsgState
@@ -72,10 +76,54 @@ namespace LyncStatusforRGBDevices
             }
         }
 
+
+        private static bool watcherIsInitialized = false;
+        public static bool WatcherIsInitialized
+        {
+            get => watcherIsInitialized;
+            set
+            {
+                if (watcherIsInitialized != value)
+                {
+                    Debug.WriteLine($"WatcherIsInitialized == {value}");
+                    watcherIsInitialized = value;
+                    WatcherStatusChanged?.Invoke(value);
+                }
+            }
+        }
+
+        static LyncStatusWatcher()
+        {
+            processWatcher = new Thread(ProcessWatcherLoop)
+            {
+                Name = "Process Watcher",
+                IsBackground = true
+            };
+            processWatcher.Start();
+        }
+
+        private static void ProcessWatcherLoop()
+        {
+            while (true)
+            {
+                clientProcessIsRunning = (Process.GetProcessesByName("lync").Length == 0) ? false : true;
+                if (!clientProcessIsRunning || !WatcherIsInitialized)
+                {
+                    if (UserStatus != Availability.Unknown) UserStatus = Availability.Unknown;
+                    try
+                    {
+                        InitializeClient();
+                    }
+                    catch (ClientWatcherException)
+                    {
+                        WatcherIsInitialized = false;
+                    }
+                }
+                Thread.Sleep(1000);
+            }
+        }
         public static bool InitializeClient()
         {
-            bool rdy;
-
             //try to get a new instance of a running lync client.
             try
             {
@@ -83,7 +131,10 @@ namespace LyncStatusforRGBDevices
                 {
                     lyncClient = null;
                     lyncClient = LyncClient.GetClient();
-                } while (lyncClient.State == ClientState.Invalid);
+                    if (lyncClient.State == ClientState.Invalid && !clientProcessIsRunning)
+                        throw new ClientWatcherException();
+                }
+                while (lyncClient.State == ClientState.Invalid);
             }
             catch (LyncClientException)
             {
@@ -96,8 +147,8 @@ namespace LyncStatusforRGBDevices
             lyncClient.ConversationManager.ConversationRemoved += Manager_ConversationRemoved;
 
             if (lyncClient.State == ClientState.SignedIn) DoLoginTasks();
-            rdy = true;
-            return rdy;
+            WatcherIsInitialized = true;
+            return WatcherIsInitialized;
         }
         private static void DoLoginTasks()
         {
