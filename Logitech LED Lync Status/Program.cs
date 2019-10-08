@@ -45,8 +45,16 @@ namespace LyncStatusforRGBDevices
         {            
             LedSdkAbstraction.Shutdown(currentSdk);
             LedSdkAbstraction.Initialize(currentSdk, "Skype for Business Status");
-            LyncStatusWatcher.InitializeClient();
-            //SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
+            try
+            {
+                LyncStatusWatcher.InitializeClient();
+            }
+            catch (ClientWatcherException)
+            {
+                var result = MessageBox.Show("Error accessing Lync client!", "Error", MessageBoxButtons.RetryCancel);
+                if (result == DialogResult.Cancel) Environment.Exit(1);
+                else ResetStatusWatcher();
+            }
         }
         private static void MsgStatusUpdated(MessageState state)
         {

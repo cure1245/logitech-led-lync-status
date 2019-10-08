@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using System.Windows.Forms;
 
 namespace LyncStatusforRGBDevices
 {
@@ -77,8 +76,6 @@ namespace LyncStatusforRGBDevices
 
         public static bool InitializeClient()
         {
-
-            //TODO: Move references to Forms to calling application.
             bool rdy;
 
             //try to get a new instance of a running lync client.
@@ -92,19 +89,9 @@ namespace LyncStatusforRGBDevices
 
                 IsClientConnected = true;
             }
-            catch (ClientNotFoundException)
+            catch (LyncClientException)
             {
-                var result = MessageBox.Show("Skype for Business is not running!", "Error accessing Lync client", MessageBoxButtons.RetryCancel);
-                if (result == DialogResult.Cancel) rdy = false;
-                else rdy = InitializeClient();
-                return rdy;
-            }
-            catch (LyncClientException e)
-            {
-                var result = MessageBox.Show(e.Message, "Error accessing Lync client", MessageBoxButtons.RetryCancel);
-                if (result == DialogResult.Cancel) rdy = false;
-                else rdy = InitializeClient();
-                return rdy;
+                throw new ClientWatcherException();
             }
 
             //Subscribe to client events.
@@ -251,5 +238,9 @@ namespace LyncStatusforRGBDevices
                 msgAck.Dispose();
             }
         }
+    }
+
+    public class ClientWatcherException : Exception
+    {
     }
 }
