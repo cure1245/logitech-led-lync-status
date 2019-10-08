@@ -39,7 +39,11 @@ namespace LyncStatusforRGBDevices
         private static void LyncStatusWatcher_ClientStatusChanged(bool clientRunning)
         {
             if (!clientRunning) LedSdkAbstraction.Shutdown(currentSdk);
-            else LedSdkAbstraction.Initialize(currentSdk, "Skype for Business Status");
+            else
+            {
+                LedSdkAbstraction.Initialize(currentSdk, "Skype for Business Status");
+                SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
+            }
         }
 
         private static void MsgReceived(object sender, EventArgs e)
