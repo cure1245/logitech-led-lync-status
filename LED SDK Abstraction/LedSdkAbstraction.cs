@@ -8,7 +8,7 @@ using CUE.NET.Devices.Generic;
 namespace LyncStatusforRGBDevices
 {
     public enum LedSdk { Logitech, Corsair }
-    static class LedSdkAbstraction
+    public static class LedSdkAbstraction
     {
         private const string COLOR_OUT_OF_RANGE = "Color values must be between 0-100";
 

@@ -5,6 +5,10 @@ VisualStudioVersion = 16.0.29209.62
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logitech LED Lync Status", "Logitech LED Lync Status\Logitech LED Lync Status.csproj", "{AD1A4C44-5CFF-4EE4-B5E8-D2AB42812E60}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lync Status Watcher", "Lync Status Watcher\Lync Status Watcher.csproj", "{7DB55697-62AD-4F43-AF3B-6AB9C2B596AD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LED SDK Abstraction", "LED SDK Abstraction\LED SDK Abstraction.csproj", "{111E305D-9652-4F28-A2A1-3D5AA19D3D91}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{AD1A4C44-5CFF-4EE4-B5E8-D2AB42812E60}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AD1A4C44-5CFF-4EE4-B5E8-D2AB42812E60}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD1A4C44-5CFF-4EE4-B5E8-D2AB42812E60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7DB55697-62AD-4F43-AF3B-6AB9C2B596AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7DB55697-62AD-4F43-AF3B-6AB9C2B596AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7DB55697-62AD-4F43-AF3B-6AB9C2B596AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7DB55697-62AD-4F43-AF3B-6AB9C2B596AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{111E305D-9652-4F28-A2A1-3D5AA19D3D91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{111E305D-9652-4F28-A2A1-3D5AA19D3D91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{111E305D-9652-4F28-A2A1-3D5AA19D3D91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{111E305D-9652-4F28-A2A1-3D5AA19D3D91}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

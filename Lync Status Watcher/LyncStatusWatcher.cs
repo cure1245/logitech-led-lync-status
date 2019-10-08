@@ -16,7 +16,7 @@ namespace LyncStatusforRGBDevices
     public delegate void AvailabilityHandler(Availability availability);
     public delegate void InstantMessageHandler(MessageState state);
 
-    static class LyncStatusWatcher
+    public static class LyncStatusWatcher
     {
         private static LyncClient lyncClient;
         private static Self self;
@@ -84,8 +84,6 @@ namespace LyncStatusforRGBDevices
                     lyncClient = null;
                     lyncClient = LyncClient.GetClient();
                 } while (lyncClient.State == ClientState.Invalid);
-
-                IsClientConnected = true;
             }
             catch (LyncClientException)
             {
