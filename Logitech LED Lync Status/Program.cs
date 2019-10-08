@@ -8,7 +8,6 @@ namespace LyncStatusforRGBDevices
     static class Program
     {
         static LedSdk currentSdk = LedSdk.Logitech;
-        static LyncStatusWatcher statusWatcher;
 
         /// <summary>
         /// The main entry point for the application.
@@ -39,37 +38,32 @@ namespace LyncStatusforRGBDevices
 
         private static void MsgReceived(object sender, EventArgs e)
         {
-            LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 2000, 200);
+            if (LyncStatusWatcher.CurrentCallState == CallState.NoUpdate)
+                LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 2000, 200);
         }
         static void ResetStatusWatcher()
         {            
-            statusWatcher = new LyncStatusWatcher();
             LedSdkAbstraction.Shutdown(currentSdk);
-            LedSdkAbstraction.Initialize(currentSdk, "Skype for Business Status");            
-            statusWatcher.InitializeClient();
+            LedSdkAbstraction.Initialize(currentSdk, "Skype for Business Status");
+            LyncStatusWatcher.InitializeClient();
             //SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
         }
         private static void MsgStatusUpdated(MessageState state)
         {
-            switch (state)
-            {
-                case MessageState.New:
-                    LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 2000, 200);                    
-                    ThreadPool.QueueUserWorkItem(FlashForWaitingMsg);
-                    break;
-                case MessageState.Updated:
-                    LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 2000, 200);
-                    break;
-            }
+            if (state == MessageState.New && LyncStatusWatcher.CurrentCallState == CallState.NoUpdate)
+                LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 2000, 200);
+            ThreadPool.QueueUserWorkItem(FlashForWaitingMsg);
         }
         private static void FlashForWaitingMsg(object state)
         {
-            while (LyncStatusWatcher.CurrentMsgState == MessageState.New)
+            bool stillWaiting;
+            do
             {
                 Thread.Sleep(10000);
-                if (LyncStatusWatcher.CurrentMsgState == MessageState.New)
+                stillWaiting = LyncStatusWatcher.CurrentMsgState == MessageState.New;
+                if (stillWaiting && LyncStatusWatcher.CurrentCallState == CallState.NoUpdate)
                     LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 1000, 200);
-            }
+            } while (stillWaiting);
         }
         private static void CallStatusUpdated(CallState state)
         {
