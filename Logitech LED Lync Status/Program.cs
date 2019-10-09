@@ -76,7 +76,7 @@ namespace LyncStatusforRGBDevices
                     LedSdkAbstraction.FlashLighting(currentSdk, 0, 0, 100, 120000, 200);
                     break;
                 case CallState.Connected:
-                    LedSdkAbstraction.PulseLighting(currentSdk, 100, 0, 0, Int32.MaxValue, 800);
+                    LedSdkAbstraction.PulseLighting(currentSdk, 100, 0, 0, 0, 800); //duration == 0 is infinite for Logitech.
                     break;
                 case CallState.NoUpdate:
                     SetLEDToCurrentStatus(LyncStatusWatcher.UserStatus);
