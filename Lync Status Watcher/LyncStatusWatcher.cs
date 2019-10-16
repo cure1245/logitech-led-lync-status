@@ -148,6 +148,7 @@ namespace LyncStatusforRGBDevices
 
             if (lyncClient.State == ClientState.SignedIn) DoLoginTasks();
             WatcherIsInitialized = true;
+            SetAvailability();
             return WatcherIsInitialized;
         }
         private static void DoLoginTasks()
@@ -158,7 +159,6 @@ namespace LyncStatusforRGBDevices
             //Subscribe to Self object events.
             self = lyncClient.Self;
             self.Contact.ContactInformationChanged += OwnInfoHasChanged;
-            SetAvailability();
         }
         private static void LyncClient_StateChanged(object sender, ClientStateChangedEventArgs e)
         {
