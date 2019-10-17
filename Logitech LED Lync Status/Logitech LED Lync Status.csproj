@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{AD1A4C44-5CFF-4EE4-B5E8-D2AB42812E60}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>LyncStatusforRGBDevices</RootNamespace>
-    <AssemblyName>Logitech LED Lync Status</AssemblyName>
+    <RootNamespace>RgbLyncStatus</RootNamespace>
+    <AssemblyName>RBG Lync Status</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

@@ -3,7 +3,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
 
-namespace LyncStatusforRGBDevices
+namespace RgbLyncStatus
 {
     static class Program
     {

@@ -6,7 +6,7 @@ using CUE.NET.Effects;
 using CUE.NET.Devices.Generic;
 using System.Diagnostics;
 
-namespace LyncStatusforRGBDevices
+namespace RgbLyncStatus
 {
     public enum LedSdk { Logitech, Corsair }
     public static class LedSdkAbstraction

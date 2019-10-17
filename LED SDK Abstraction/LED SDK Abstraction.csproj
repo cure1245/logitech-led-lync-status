@@ -7,7 +7,7 @@
     <ProjectGuid>{111E305D-9652-4F28-A2A1-3D5AA19D3D91}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LedSdkAbstraction</RootNamespace>
+    <RootNamespace>RgbLyncStatus</RootNamespace>
     <AssemblyName>LedSdkAbstraction</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

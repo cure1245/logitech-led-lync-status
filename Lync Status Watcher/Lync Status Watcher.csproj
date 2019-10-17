@@ -7,7 +7,7 @@
     <ProjectGuid>{7DB55697-62AD-4F43-AF3B-6AB9C2B596AD}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LyncStatusWatcher</RootNamespace>
+    <RootNamespace>RgbLyncStatus</RootNamespace>
     <AssemblyName>LyncStatusWatcher</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

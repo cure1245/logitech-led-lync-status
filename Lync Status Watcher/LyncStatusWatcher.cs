@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 
-namespace LyncStatusforRGBDevices
+namespace RgbLyncStatus
 {
     public enum CallState { Ringing, Connected, NoUpdate }
     public enum Availability { Unknown, Free, Busy, Away, Idle, DoNotDisturb }
